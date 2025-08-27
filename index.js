@@ -8,9 +8,15 @@ import leaveRouter from './routes/leave.js'
 import settingRouter from './routes/setting.js'
 import dashboardRouter from './routes/dashboard.js'
 import connectToDatabase from './db/db.js'
+// import {userRegister} from './userSeed.js'
 
 connectToDatabase()
+// userRegister()
 const app = express()
+app.use(cors({
+    origin:"https://employee-frontend-jade-iota.vercel.app",
+    credentials:true
+}))
 app.use(cors())
 app.use(express.json())
 app.use(express.static('public/uploads'))
@@ -21,7 +27,6 @@ app.use('/api/salary', salaryRouter)
 app.use('/api/leave', leaveRouter)
 app.use('/api/setting', settingRouter)
 app.use('/api/dashboard', dashboardRouter)
-
 
 
 app.listen(process.env.PORT, () => {
