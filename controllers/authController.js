@@ -36,8 +36,8 @@
 // export { login, verify }
 
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js'
-import bcrypt from 'bcrypt'
+import User from '../models/User.js';
+import bcrypt from 'bcrypt';
 
 const login = async (req, res) => {
     try {
@@ -53,6 +53,11 @@ const login = async (req, res) => {
             return res.status(401).json({ success: false, error: "Wrong Password" });
         }
 
+        if (!process.env.JWT_KEY) {
+            console.error("❌ JWT_KEY is not set");
+            return res.status(500).json({ success: false, error: "server error" });
+        }
+
         const token = jwt.sign(
             { _id: user._id, role: user.role },
             process.env.JWT_KEY,
@@ -66,8 +71,8 @@ const login = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, error: "Internal Server Error" });
+        console.error("🔥 Login error:", error);
+        res.status(500).json({ success: false, error: "server error" });
     }
 };
 
@@ -75,4 +80,4 @@ const verify = (req, res) => {
     return res.status(200).json({ success: true, user: req.user });
 };
 
-export { login, verify }
+export { login, verify };
