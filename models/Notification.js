@@ -1,11 +1,10 @@
-// backend/models/Notification.js
 import mongoose from "mongoose";
 
 const notificationSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     message: { type: String, required: true },
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // employee who requested
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // employee who triggered it
     status: { type: String, enum: ["unread", "read"], default: "unread" },
   },
   { timestamps: true }

@@ -88,13 +88,13 @@ import salaryRouter from './routes/salary.js'
 import leaveRouter from './routes/leave.js'
 import settingRouter from './routes/setting.js'
 import dashboardRouter from './routes/dashboard.js'
+import notificationsRouter from './routes/notification.js'
 import connectToDatabase from './db/db.js'
 import { userRegister } from './userSeed.js'
 
 const app = express()
 const server = http.createServer(app)
 
-// Setup Socket.IO
 const io = new Server(server, {
   cors: {
     origin: "https://employee-frontend-jade-iota.vercel.app",
@@ -103,13 +103,11 @@ const io = new Server(server, {
   }
 })
 
-// Make io accessible in routes
 app.use((req, res, next) => {
   req.io = io
   next()
 })
 
-// Connect to Database
 connectToDatabase()
   .then(async () => {
     console.log("✅ Database Connected")
@@ -117,7 +115,6 @@ connectToDatabase()
   })
   .catch(err => console.log("❌ DB Connection Error:", err))
 
-// Middleware
 app.use(cors({
   origin: "https://employee-frontend-jade-iota.vercel.app",
   credentials: true
@@ -133,24 +130,16 @@ app.use('/api/salary', salaryRouter)
 app.use('/api/leave', leaveRouter)
 app.use('/api/setting', settingRouter)
 app.use('/api/dashboard', dashboardRouter)
+app.use('/api/notifications', notificationsRouter)
 
-// Socket.IO events
 io.on('connection', (socket) => {
   console.log("⚡ New client connected:", socket.id)
 
   socket.on('disconnect', () => {
     console.log("❌ Client disconnected:", socket.id)
   })
-
-  // Example: listen for "sendNotification" event
-  socket.on('sendNotification', (data) => {
-    console.log("Notification received:", data)
-    // Broadcast to all connected clients
-    io.emit('receiveNotification', data)
-  })
 })
 
-// Start Server
 const PORT = process.env.PORT || 5000
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`)

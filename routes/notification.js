@@ -1,27 +1,32 @@
-// backend/routes/notification.js
 import express from "express";
+import authMiddleware from "../middleware/authMiddleware.js";
 import Notification from "../models/Notification.js";
 
 const router = express.Router();
 
-// ✅ Get all notifications for admin
-router.get("/", async (req, res) => {
+// GET all notifications (admin view)
+router.get("/", authMiddleware, async (req, res) => {
   try {
-    const notifications = await Notification.find().sort({ createdAt: -1 });
+    const notifications = await Notification.find()
+      .sort({ createdAt: -1 })
+      .populate("userId", "name email"); // show employee info
     res.json(notifications);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ✅ Mark notification as read
-router.put("/:id/read", async (req, res) => {
+// Mark a notification as read
+router.put("/:id/read", authMiddleware, async (req, res) => {
   try {
     const notification = await Notification.findByIdAndUpdate(
       req.params.id,
       { status: "read" },
       { new: true }
     );
+    if (!notification) {
+      return res.status(404).json({ error: "Notification not found" });
+    }
     res.json(notification);
   } catch (err) {
     res.status(500).json({ error: err.message });
