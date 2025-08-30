@@ -13,51 +13,49 @@
 
 
 // ----------------------------------------------------------------------------
-import express from 'express';
-import authMiddleware from '../middleware/authMiddleware.js';
-import { addLeave, getLeave, getLeaves, getLeaveDetail, updateLeave } from '../controllers/leaveController.js';
+// backend/routes/leave.js
+import express from "express";
+import authMiddleware from "../middleware/authMiddleware.js";
+import Leave from "../models/Leave.js";
+import Notification from "../models/Notification.js";
 
 const router = express.Router();
 
-// ✅ Add new leave request (with Socket.IO)
-router.post('/add', authMiddleware, async (req, res) => {
+// Add new leave request
+router.post("/add", authMiddleware, async (req, res) => {
   try {
-    // Call your existing controller
-    const leave = await addLeave(req, res);
+    const { startDate, endDate, reason } = req.body;
+    const userId = req.user.id; // from authMiddleware
 
-    // Create notification (assuming addLeave returns leave)
-    const notification = {
-      title: 'Leave Request',
-      message: `Employee has requested leave from ${req.body.startDate} to ${req.body.endDate}`,
-      userId: req.user.id,
+    // 1. Save leave request
+    const leave = new Leave({ userId, startDate, endDate, reason });
+    await leave.save();
+
+    // 2. Create notification for admin
+    const notification = new Notification({
+      title: "Leave Request",
+      message: `${req.user.name} has requested leave from ${startDate} to ${endDate}`,
+      userId,
+      status: "unread",
       createdAt: new Date(),
-      status: 'unread'
-    };
+    });
+    await notification.save();
 
-    // Save notification to DB (optional)
-    // If you have Notification model:
-    // await new Notification(notification).save();
-
-    // Emit real-time notification to all connected clients
-    req.io.emit('newLeaveRequest', notification);
+    // 3. Emit real-time notification to admin dashboard
+    req.io.emit("newLeaveRequest", notification);
 
     res.status(201).json({ leave, notification });
   } catch (err) {
+    console.log(err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Get leave detail by ID
-router.get('/detail/:id', authMiddleware, getLeaveDetail);
-
-// Get leave for a specific user and role
-router.get('/:id/:role', authMiddleware, getLeave);
-
-// Get all leaves (admin)
-router.get('/', authMiddleware, getLeaves);
-
-// Update leave
-router.put('/:id', authMiddleware, updateLeave);
+// Other leave routes (get, update)
+router.get("/", authMiddleware, async (req, res) => {
+  const leaves = await Leave.find().populate("userId", "name email");
+  res.json(leaves);
+});
 
 export default router;
 
