@@ -9,7 +9,7 @@ router.get("/", authMiddleware, async (req, res) => {
   try {
     const notifications = await Notification.find()
       .sort({ createdAt: -1 })
-      .populate("userId", "name email"); // show employee info
+      .populate("userId", "name email"); 
     res.json(notifications);
   } catch (err) {
     res.status(500).json({ error: err.message });

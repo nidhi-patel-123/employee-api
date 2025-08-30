@@ -23,11 +23,17 @@ const router = express.Router();
 // Add new leave request (employee side)
 router.post("/add", authMiddleware, async (req, res) => {
   try {
-    const { startDate, endDate, reason } = req.body;
-    const userId = req.user.id; // from authMiddleware
+    const { startDate, endDate, reason, leaveType } = req.body;
+    const userId = req.user._id; // 👈 fix
 
     // 1. Save leave request
-    const leave = new Leave({ userId, startDate, endDate, reason });
+    const leave = new Leave({
+      employeeId: userId,
+      leaveType,
+      startDate,
+      endDate,
+      reason,
+    });
     await leave.save();
 
     // 2. Create notification for admin
@@ -51,7 +57,7 @@ router.post("/add", authMiddleware, async (req, res) => {
 
 // Get all leaves (admin)
 router.get("/", authMiddleware, async (req, res) => {
-  const leaves = await Leave.find().populate("userId", "name email");
+  const leaves = await Leave.find().populate("employeeId", "name email");
   res.json(leaves);
 });
 
