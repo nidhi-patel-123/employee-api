@@ -13,32 +13,33 @@
 
 
 // ----------------------------------------------------------------------------
-// backend/routes/leave.js
-import express from "express";
-import Leave from "../models/Leave.js";
-import Notification from "../models/Notification.js";
+import express from 'express';
+import authMiddleware from '../middleware/authMiddleware.js';
+import { addLeave, getLeave, getLeaves, getLeaveDetail, updateLeave } from '../controllers/leaveController.js';
 
 const router = express.Router();
 
-// ✅ Add new leave request
-router.post("/add", async (req, res) => {
+// ✅ Add new leave request (with Socket.IO)
+router.post('/add', authMiddleware, async (req, res) => {
   try {
-    const { userId, startDate, endDate, reason } = req.body;
+    // Call your existing controller
+    const leave = await addLeave(req, res);
 
-    // Save leave request
-    const leave = new Leave({ userId, startDate, endDate, reason });
-    await leave.save();
+    // Create notification (assuming addLeave returns leave)
+    const notification = {
+      title: 'Leave Request',
+      message: `Employee has requested leave from ${req.body.startDate} to ${req.body.endDate}`,
+      userId: req.user.id,
+      createdAt: new Date(),
+      status: 'unread'
+    };
 
-    // Create notification
-    const notification = new Notification({
-      title: "Leave Request",
-      message: `Employee has requested leave from ${startDate} to ${endDate}`,
-      userId,
-    });
-    await notification.save();
+    // Save notification to DB (optional)
+    // If you have Notification model:
+    // await new Notification(notification).save();
 
-    // Emit real-time event via Socket.IO
-    req.io.emit("newLeaveRequest", notification);
+    // Emit real-time notification to all connected clients
+    req.io.emit('newLeaveRequest', notification);
 
     res.status(201).json({ leave, notification });
   } catch (err) {
@@ -46,4 +47,17 @@ router.post("/add", async (req, res) => {
   }
 });
 
+// Get leave detail by ID
+router.get('/detail/:id', authMiddleware, getLeaveDetail);
+
+// Get leave for a specific user and role
+router.get('/:id/:role', authMiddleware, getLeave);
+
+// Get all leaves (admin)
+router.get('/', authMiddleware, getLeaves);
+
+// Update leave
+router.put('/:id', authMiddleware, updateLeave);
+
 export default router;
+
