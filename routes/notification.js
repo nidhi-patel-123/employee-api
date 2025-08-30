@@ -4,19 +4,19 @@ import Notification from "../models/Notification.js";
 
 const router = express.Router();
 
-// GET all notifications (admin view)
+// GET all notifications (Admin view)
 router.get("/", authMiddleware, async (req, res) => {
   try {
     const notifications = await Notification.find()
       .sort({ createdAt: -1 })
-      .populate("userId", "name email"); 
+      .populate("userId", "name email");
     res.json(notifications);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Failed to fetch notifications" });
   }
 });
 
-// Mark a notification as read
+// Mark notification as read
 router.put("/:id/read", authMiddleware, async (req, res) => {
   try {
     const notification = await Notification.findByIdAndUpdate(
@@ -29,7 +29,7 @@ router.put("/:id/read", authMiddleware, async (req, res) => {
     }
     res.json(notification);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Failed to update notification" });
   }
 });
 
