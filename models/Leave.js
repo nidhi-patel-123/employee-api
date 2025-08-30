@@ -25,6 +25,3 @@ const leaveSchema = new Schema({
 });
 const Leave = mongoose.model("Leave", leaveSchema)
 export default Leave;
-
-
-// ----------------------------------------------------------------
