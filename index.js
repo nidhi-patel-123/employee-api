@@ -89,37 +89,37 @@ import leaveRouter from './routes/leave.js'
 import settingRouter from './routes/setting.js'
 import dashboardRouter from './routes/dashboard.js'
 import notificationsRouter from './routes/notification.js'
-
 import connectToDatabase from './db/db.js'
 import { userRegister } from './userSeed.js'
 
 const app = express()
 const server = http.createServer(app)
 
-// ✅ Socket.IO Setup
+// 🔑 Allow both websocket + polling (for fallback)
 const io = new Server(server, {
   cors: {
-    origin: "https://employee-frontend-jade-iota.vercel.app",
-    methods: ["GET", "POST", "PUT"],
+    origin: "https://employee-frontend-jade-iota.vercel.app", // frontend domain
+    methods: ["GET", "POST"],
     credentials: true
-  }
+  },
+  transports: ["websocket", "polling"]
 })
 
-// Make io accessible inside routes
+// Middleware to attach io
 app.use((req, res, next) => {
   req.io = io
   next()
 })
 
-// ✅ DB Connection + Seed User
+// Database connect
 connectToDatabase()
   .then(async () => {
     console.log("✅ Database Connected")
-    await userRegister() // default admin / user create
+    await userRegister()
   })
   .catch(err => console.log("❌ DB Connection Error:", err))
 
-// ✅ Middlewares
+// Middlewares
 app.use(cors({
   origin: "https://employee-frontend-jade-iota.vercel.app",
   credentials: true
@@ -127,7 +127,7 @@ app.use(cors({
 app.use(express.json())
 app.use(express.static('public/uploads'))
 
-// ✅ Routes
+// Routes
 app.use('/api/auth', authRouter)
 app.use('/api/department', departmentRouter)
 app.use('/api/employee', employeeRouter)
@@ -137,18 +137,25 @@ app.use('/api/setting', settingRouter)
 app.use('/api/dashboard', dashboardRouter)
 app.use('/api/notifications', notificationsRouter)
 
-// ✅ Socket.io Events
+// Socket.IO events
 io.on('connection', (socket) => {
   console.log("⚡ Client connected:", socket.id)
+
+  // Example: listen for new notification
+  socket.on("sendNotification", (data) => {
+    console.log("📢 New notification:", data)
+    io.emit("newNotification", data) // broadcast to all clients
+  })
 
   socket.on('disconnect', () => {
     console.log("❌ Client disconnected:", socket.id)
   })
 })
 
-// ✅ Start Server
+// Server start
 const PORT = process.env.PORT || 5000
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`)
 })
+
 
