@@ -76,59 +76,82 @@
 // // --------------------------------------------------------------------------------------------------------------------
 
 
-// backend/server.js
-import express from "express";
-import mongoose from "mongoose";
-import cors from "cors";
-import http from "http";
-import { Server } from "socket.io";
+import express from 'express'
+import cors from 'cors'
+import http from 'http'
+import { Server } from 'socket.io'
 
-import authRouter from "./routes/auth.js";
-import departmentRouter from "./routes/department.js";
-import employeeRouter from "./routes/employee.js";
-import salaryRouter from "./routes/salary.js";
-import leaveRouter from "./routes/leave.js";
-import notificationRouter from "./routes/notification.js";
+import authRouter from './routes/auth.js'
+import departmentRouter from './routes/department.js'
+import employeeRouter from './routes/employee.js'
+import salaryRouter from './routes/salary.js'
+import leaveRouter from './routes/leave.js'
+import settingRouter from './routes/setting.js'
+import dashboardRouter from './routes/dashboard.js'
+import connectToDatabase from './db/db.js'
+import { userRegister } from './userSeed.js'
 
-const app = express();
-const server = http.createServer(app);
+const app = express()
+const server = http.createServer(app)
 
+// Setup Socket.IO
 const io = new Server(server, {
-  cors: { origin: "https://employee-frontend-jade-iota.vercel.app", methods: ["GET", "POST"] },
-});
+  cors: {
+    origin: "https://employee-frontend-jade-iota.vercel.app",
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+})
+
+// Make io accessible in routes
+app.use((req, res, next) => {
+  req.io = io
+  next()
+})
+
+// Connect to Database
+connectToDatabase()
+  .then(async () => {
+    console.log("✅ Database Connected")
+    await userRegister()
+  })
+  .catch(err => console.log("❌ DB Connection Error:", err))
 
 // Middleware
-app.use(cors());
-app.use(express.json());
-
-// Attach io to requests
-app.use((req, res, next) => {
-  req.io = io;
-  next();
-});
+app.use(cors({
+  origin: "https://employee-frontend-jade-iota.vercel.app",
+  credentials: true
+}))
+app.use(express.json())
+app.use(express.static('public/uploads'))
 
 // Routes
-app.use("/api/auth", authRouter);
-app.use("/api/departments", departmentRouter);
-app.use("/api/employees", employeeRouter);
-app.use("/api/salary", salaryRouter);
-app.use("/api/leave", leaveRouter);
-app.use("/api/notifications", notificationRouter);
+app.use('/api/auth', authRouter)
+app.use('/api/department', departmentRouter)
+app.use('/api/employee', employeeRouter)
+app.use('/api/salary', salaryRouter)
+app.use('/api/leave', leaveRouter)
+app.use('/api/setting', settingRouter)
+app.use('/api/dashboard', dashboardRouter)
 
-// DB + Server Start
-mongoose
-  .connect("mongodb://127.0.0.1:27017/ems")
-  .then(() => {
-    console.log("MongoDB connected");
-    server.listen(5000, () => console.log("Server running on 5000"));
+// Socket.IO events
+io.on('connection', (socket) => {
+  console.log("⚡ New client connected:", socket.id)
+
+  socket.on('disconnect', () => {
+    console.log("❌ Client disconnected:", socket.id)
   })
-  .catch((err) => console.log(err));
 
-// Socket.IO connection
-io.on("connection", (socket) => {
-  console.log("⚡ New client connected", socket.id);
+  // Example: listen for "sendNotification" event
+  socket.on('sendNotification', (data) => {
+    console.log("Notification received:", data)
+    // Broadcast to all connected clients
+    io.emit('receiveNotification', data)
+  })
+})
 
-  socket.on("disconnect", () => {
-    console.log("❌ Client disconnected", socket.id);
-  });
-});
+// Start Server
+const PORT = process.env.PORT || 5000
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`)
+})
